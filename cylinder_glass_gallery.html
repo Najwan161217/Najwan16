@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WAIFU PROJECTION</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts: Rajdhani & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        hud: ['Rajdhani', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #08020c;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+        }
+
+        #webgl-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            cursor: grab;
+        }
+
+        #webgl-container:active {
+            cursor: grabbing;
+        }
+
+        /* Deep Cosmic Crimson-Violet Radial Vignette Overlay */
+        .cosmic-vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+            background: radial-gradient(circle at 50% 50%, transparent 45%, rgba(6, 1, 10, 0.72) 100%);
+        }
+
+        /* 2D Motion-Tracking Bounding Boxes Overlay Canvas */
+        #tracking-hud-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 3;
+            transition: opacity 0.25s ease;
+        }
+
+        /* CRT Monitor Scanlines, Subpixel Grid & Iridescent Rainbow Prism Glare */
+        .crt-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 4;
+            border-radius: 22px;
+            box-shadow:
+                inset 0 0 65px rgba(0, 0, 0, 0.88),
+                inset 0 0 0 3px rgba(18, 10, 28, 0.95);
+            background-image:
+                repeating-linear-gradient(
+                    to bottom,
+                    rgba(255, 255, 255, 0.03) 0px,
+                    rgba(255, 255, 255, 0.03) 1px,
+                    rgba(0, 0, 0, 0.16) 2px,
+                    rgba(0, 0, 0, 0.16) 3px
+                ),
+                repeating-linear-gradient(
+                    to right,
+                    rgba(255, 60, 120, 0.02) 0px,
+                    rgba(60, 255, 160, 0.02) 1px,
+                    rgba(80, 140, 255, 0.02) 2px
+                );
+            transition: opacity 0.25s ease;
+        }
+
+        .prism-flare-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            background:
+                radial-gradient(ellipse at 22% 28%, rgba(255, 120, 180, 0.09) 0%, rgba(120, 220, 255, 0.07) 25%, rgba(250, 230, 110, 0.05) 45%, transparent 65%),
+                radial-gradient(ellipse at 82% 72%, rgba(96, 165, 250, 0.09) 0%, rgba(232, 121, 249, 0.07) 30%, transparent 60%);
+            mix-blend-mode: screen;
+            transition: opacity 0.25s ease;
+        }
+
+        /* Lightbox CRT & Prism Sheen */
+        .lightbox-crt-fx {
+            background-image:
+                repeating-linear-gradient(
+                    to bottom,
+                    rgba(255, 255, 255, 0.04) 0px,
+                    rgba(255, 255, 255, 0.04) 1px,
+                    rgba(0, 0, 0, 0.18) 2px,
+                    rgba(0, 0, 0, 0.18) 3px
+                ),
+                linear-gradient(125deg, transparent 20%, rgba(255, 90, 150, 0.14) 38%, rgba(250, 230, 90, 0.14) 46%, rgba(80, 210, 255, 0.16) 54%, transparent 72%);
+        }
+
+        /* Futuristic Sliders */
+        input[type="range"].cyber-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].cyber-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 12px #f472b6, 0 0 4px #ffffff;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input[type="range"].cyber-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+            box-shadow: 0 0 18px #e879f9, 0 0 6px #ffffff;
+        }
+
+        input[type="range"].cyber-slider::-moz-range-thumb {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: none;
+            box-shadow: 0 0 12px #f472b6;
+            cursor: pointer;
+        }
+
+        /* Chamfered Cyber Buttons */
+        .cyber-btn {
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .cyber-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Custom Scrollbar for Gallery Modal */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 6, 24, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(217, 70, 239, 0.45);
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="webgl-container"></div>
+    <div class="cosmic-vignette"></div>
+    <!-- Real-time 3D-Projected Motion-Tracking Bounding Boxes Canvas -->
+    <canvas id="tracking-hud-canvas"></canvas>
+    <!-- CRT Scanline Bezel & Rainbow Chromatic Glare -->
+    <div id="crt-overlay" class="crt-overlay"></div>
+    <div id="prism-overlay" class="prism-flare-overlay"></div>
+
+    <!-- Top Futuristic Navigation Bar -->
+    <header class="fixed top-[68px] left-0 right-0 z-30 flex items-center justify-end px-4 py-3.5 sm:px-8 sm:py-5 pointer-events-none">
+        <!-- Top Right Navigation Links -->
+        <nav class="pointer-events-auto flex items-center gap-3 sm:gap-7 font-hud text-xs sm:text-sm font-semibold tracking-[0.18em]">
+            <button id="nav-explore" class="text-white/90 hover:text-fuchsia-300 transition py-1 px-1.5 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1.5px] after:bg-fuchsia-400 after:scale-x-0 hover:after:scale-x-100 after:transition-transform">
+                EXPLORE
+            </button>
+            <button id="nav-gallery" class="text-white/85 hover:text-fuchsia-300 transition py-1 px-1.5">
+                GALLERY
+            </button>
+        </nav>
+    </header>
+
+    <!-- Hover Shard Tooltip -->
+    <div id="shard-tooltip" class="fixed z-30 pointer-events-none opacity-0 transition-opacity duration-150 px-3 py-1.5 rounded-lg bg-[#140722]/90 border border-fuchsia-400/50 backdrop-blur-md shadow-[0_0_20px_rgba(217,70,239,0.4)]">
+        <p id="tooltip-title" class="font-hud text-xs font-bold tracking-widest text-white uppercase"></p>
+        <p class="text-[10px] text-fuchsia-300 tracking-wider">KLIK UNTUK MEMPERBESAR</p>
+    </div>
+
+    <!-- Bottom Glassmorphism HUD Control Bar -->
+    <footer class="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-[#090311]/95 via-[#11061e]/85 to-transparent backdrop-blur-xl border-t border-fuchsia-500/20 px-4 py-3 sm:px-8 sm:py-4">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3.5 lg:gap-8">
+            
+            <!-- Sliders Group (ROTATE SPEED, RADIUS, SCATTER) -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-6 w-full lg:w-[54%]">
+                <!-- Rotate Speed -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between font-hud text-[11px] sm:text-xs font-semibold tracking-[0.14em] text-fuchsia-100/90">
+                        <span>ROTATE SPEED</span>
+                        <span id="lbl-speed" class="text-fuchsia-300 font-mono text-[10px]">1.0x</span>
+                    </div>
+                    <input type="range" id="ctrl-speed" class="cyber-slider" min="-3" max="3" step="0.1" value="1.0">
+                </div>
+
+                <!-- Radius -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between font-hud text-[11px] sm:text-xs font-semibold tracking-[0.14em] text-fuchsia-100/90">
+                        <span>RADIUS</span>
+                        <span id="lbl-radius" class="text-fuchsia-300 font-mono text-[10px]">100%</span>
+                    </div>
+                    <input type="range" id="ctrl-radius" class="cyber-slider" min="0.65" max="1.55" step="0.02" value="1.0">
+                </div>
+
+                <!-- Scatter -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between font-hud text-[11px] sm:text-xs font-semibold tracking-[0.14em] text-fuchsia-100/90">
+                        <span>SCATTER</span>
+                        <span id="lbl-scatter" class="text-fuchsia-300 font-mono text-[10px]">35%</span>
+                    </div>
+                    <input type="range" id="ctrl-scatter" class="cyber-slider" min="0" max="1.5" step="0.05" value="0.35">
+                </div>
+            </div>
+
+            <!-- Action Buttons Group -->
+            <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full lg:w-auto font-hud text-[11px] sm:text-xs font-semibold tracking-[0.14em]">
+                <button id="btn-tracking-hud" class="cyber-btn flex-1 sm:flex-initial px-3 py-2 sm:px-4 sm:py-2.5 bg-violet-600/35 hover:bg-violet-500/50 border border-violet-300/70 text-violet-100 shadow-[0_0_15px_rgba(168,85,247,0.3)] whitespace-nowrap">
+                    TRACKING HUD: ON
+                </button>
+
+                <button id="btn-spin-boost" class="cyber-btn flex-1 sm:flex-initial px-3 py-2 sm:px-4 sm:py-2.5 bg-white/[0.04] hover:bg-fuchsia-500/20 border border-white/25 hover:border-fuchsia-400 text-white/90 whitespace-nowrap">
+                    DRAG TO SPIN
+                </button>
+
+                <button id="btn-play-pause" class="cyber-btn flex-1 sm:flex-initial px-3.5 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-fuchsia-600/40 to-purple-600/40 hover:from-fuchsia-500/60 hover:to-purple-500/60 border border-fuchsia-300/70 text-white shadow-[0_0_20px_rgba(232,121,249,0.3)] whitespace-nowrap">
+                    PLAY / PAUSE
+                </button>
+            </div>
+
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="hud-toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2 rounded-full bg-[#19082b]/95 border border-fuchsia-400/50 text-fuchsia-100 font-hud text-xs sm:text-sm tracking-widest uppercase shadow-[0_0_25px_rgba(217,70,239,0.5)] opacity-0 pointer-events-none transition-opacity duration-300">
+        MEMORIES SYNCHRONIZED
+    </div>
+
+    <!-- Lightbox Modal for Inspecting Individual Shards -->
+    <div id="lightbox-modal" class="fixed inset-0 z-50 bg-[#06020a]/90 backdrop-blur-xl hidden items-center justify-center p-4 sm:p-8">
+        <button id="lb-close" aria-label="Tutup" class="fixed top-5 right-5 sm:top-8 sm:right-8 z-50 w-11 h-11 rounded-full bg-white/10 hover:bg-fuchsia-500/30 border border-fuchsia-400/40 flex items-center justify-center text-white transition">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <button id="lb-prev" aria-label="Sebelumnya" class="fixed left-3 sm:left-8 top-1/2 -translate-y-1/2 z-50 w-11 h-11 rounded-full bg-white/10 hover:bg-fuchsia-500/30 border border-fuchsia-400/40 flex items-center justify-center text-white transition">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+
+        <button id="lb-next" aria-label="Berikutnya" class="fixed right-3 sm:right-8 top-1/2 -translate-y-1/2 z-50 w-11 h-11 rounded-full bg-white/10 hover:bg-fuchsia-500/30 border border-fuchsia-400/40 flex items-center justify-center text-white transition">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+
+        <div class="relative max-w-4xl w-full flex flex-col items-center">
+            <div id="lb-frame" class="relative p-1.5 rounded-2xl bg-gradient-to-br from-fuchsia-400/60 via-purple-500/30 to-pink-500/60 shadow-[0_0_60px_rgba(217,70,239,0.35)] overflow-hidden">
+                <img id="lb-image" src="" alt="Memory Shard" class="max-h-[72vh] w-auto rounded-xl object-contain bg-[#0c0414]">
+                <!-- Lightbox CRT Scanlines + Rainbow Prism Sheen + Interactive Tracking Canvas -->
+                <div id="lb-crt-sheen" class="lightbox-crt-fx pointer-events-none absolute inset-1.5 rounded-xl"></div>
+                <canvas id="lb-tracking-canvas" class="pointer-events-none absolute inset-1.5 w-[calc(100%-12px)] h-[calc(100%-12px)] rounded-xl"></canvas>
+            </div>
+            <div class="mt-4 text-center">
+                <h3 id="lb-title" class="font-hud text-lg sm:text-xl font-bold tracking-[0.2em] text-white uppercase"></h3>
+                <p id="lb-meta" class="font-hud text-xs tracking-[0.18em] text-fuchsia-300 mt-1"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gallery Grid Modal -->
+    <div id="grid-modal" class="fixed inset-0 z-50 bg-[#07020d]/92 backdrop-blur-xl hidden flex-col p-5 sm:p-10 overflow-y-auto">
+        <div class="max-w-6xl w-full mx-auto flex items-center justify-between pb-6 border-b border-fuchsia-500/25">
+            <div>
+                <h2 id="modal-heading" class="font-hud text-xl sm:text-2xl font-bold tracking-[0.2em] text-white uppercase">SHARD ARCHIVE</h2>
+                <p id="modal-subheading" class="text-xs sm:text-sm text-fuchsia-300/80 mt-1">Semua fragmen memori yang mengorbit di dalam pusaran tabung 3D</p>
+            </div>
+            <button id="grid-close" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-fuchsia-500/30 border border-fuchsia-400/40 font-hud text-xs tracking-widest uppercase text-white transition">
+                CLOSE [ESC]
+            </button>
+        </div>
+
+        <!-- Photo Thumbnails Grid -->
+        <div id="gallery-grid" class="max-w-6xl w-full mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 pt-6"></div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * CYLINDER GLASS GALLERY - 3D SHATTERED VORTEX ENGINE (THREE.JS)
+         * ============================================================================
+         */
+
+        // 1. Procedural Cyber-Fantasy Artwork Generator (Zero external broken image URLs)
+        function createProceduralMemoryArtworks() {
+            const themes = [
+                { title: 'ASTRAL STELLARON', c1: '#1a0633', c2: '#7e22ce', accent: '#f472b6', hair: '#fbcfe8', style: 'portrait1' },
+                { title: 'CHRONO ARCHIVIST', c1: '#0f172a', c2: '#4338ca', accent: '#38bdf8', hair: '#e2e8f0', style: 'portrait2' },
+                { title: 'CRIMSON MEMORY', c1: '#2a0415', c2: '#be185d', accent: '#fda4af', hair: '#ffe4e6', style: 'portrait3' },
+                { title: 'NEBULA ORACLE', c1: '#1e0b36', c2: '#9333ea', accent: '#e879f9', hair: '#f5d0fe', style: 'portrait4' },
+                { title: 'ECLIPSE VANGUARD', c1: '#090d16', c2: '#312e81', accent: '#818cf8', hair: '#c7d2fe', style: 'portrait5' },
+                { title: 'VOID MIRAGE', c1: '#22072e', c2: '#a21caf', accent: '#f0abfc', hair: '#fae8ff', style: 'portrait6' },
+                { title: 'AMETHYST ECHO', c1: '#17072b', c2: '#6d28d9', accent: '#c084fc', hair: '#ede9fe', style: 'portrait7' },
+                { title: 'SOLARIS SHARD', c1: '#290a1e', c2: '#db2777', accent: '#f9a8d4', hair: '#fce7f3', style: 'portrait8' },
+                { title: 'CYBER VALKYRIE', c1: '#110726', c2: '#5b21b6', accent: '#a78bfa', hair: '#ddd6fe', style: 'portrait9' },
+                { title: 'PHANTOM PRISM', c1: '#1f0524', c2: '#86198f', accent: '#e879f9', hair: '#f5d0fe', style: 'portrait10' },
+                { title: 'STARLIGHT RELIC', c1: '#0d0c24', c2: '#3730a3', accent: '#60a5fa', hair: '#dbeafe', style: 'portrait11' },
+                { title: 'ETHEREAL PUZZLE', c1: '#260626', c2: '#9d174d', accent: '#f472b6', hair: '#fbcfe8', style: 'portrait12' }
+            ];
+
+            return themes.map((t, idx) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 640;
+                const ctx = canvas.getContext('2d');
+
+                // Rich cosmic gradient background
+                const bg = ctx.createLinearGradient(0, 0, 512, 640);
+                bg.addColorStop(0, t.c1);
+                bg.addColorStop(0.55, t.c2);
+                bg.addColorStop(1, '#090212');
+                ctx.fillStyle = bg;
+                ctx.fillRect(0, 0, 512, 640);
+
+                // Luminous astral halo behind character silhouette
+                const halo = ctx.createRadialGradient(256, 250, 15, 256, 250, 230);
+                halo.addColorStop(0, '#ffffff');
+                halo.addColorStop(0.25, t.accent);
+                halo.addColorStop(0.65, 'rgba(192, 132, 252, 0.2)');
+                halo.addColorStop(1, 'transparent');
+                ctx.fillStyle = halo;
+                ctx.fillRect(0, 0, 512, 640);
+
+                // Sacred geometric rings in artwork
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(256, 250, 130 + (idx % 3) * 20, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.setLineDash([12, 8]);
+                ctx.strokeStyle = t.accent;
+                ctx.beginPath();
+                ctx.arc(256, 250, 175, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                // Stylized Anime/Cyber-Fantasy Character Bust Silhouette & Glowing Rim
+                ctx.save();
+                const shiftX = ((idx % 3) - 1) * 18;
+                // Shoulders & Cloak
+                const cloakGrad = ctx.createLinearGradient(120, 320, 390, 640);
+                cloakGrad.addColorStop(0, '#18092c');
+                cloakGrad.addColorStop(0.5, '#3b1261');
+                cloakGrad.addColorStop(1, '#0d0417');
+                ctx.fillStyle = cloakGrad;
+                ctx.beginPath();
+                ctx.moveTo(95 + shiftX, 640);
+                ctx.quadraticCurveTo(135 + shiftX, 410, 256 + shiftX, 395);
+                ctx.quadraticCurveTo(377 + shiftX, 410, 417 + shiftX, 640);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = t.accent;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Flowing Hair Back Layer
+                ctx.fillStyle = t.hair;
+                ctx.beginPath();
+                ctx.ellipse(256 + shiftX, 275, 92, 125, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Face Contour
+                ctx.fillStyle = '#fde8ef';
+                ctx.beginPath();
+                ctx.moveTo(205 + shiftX, 240);
+                ctx.quadraticCurveTo(205 + shiftX, 318, 256 + shiftX, 336);
+                ctx.quadraticCurveTo(307 + shiftX, 318, 307 + shiftX, 240);
+                ctx.arc(256 + shiftX, 240, 51, 0, Math.PI, true);
+                ctx.fill();
+
+                // Expressive Anime Eyes
+                ctx.fillStyle = t.c2;
+                ctx.beginPath();
+                ctx.ellipse(234 + shiftX, 268, 9, 12, 0, 0, Math.PI * 2);
+                ctx.ellipse(278 + shiftX, 268, 9, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye Highlights
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(231 + shiftX, 264, 3.5, 0, Math.PI * 2);
+                ctx.arc(275 + shiftX, 264, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Front Hair Bangs
+                ctx.fillStyle = t.hair;
+                ctx.beginPath();
+                ctx.moveTo(195 + shiftX, 245);
+                ctx.quadraticCurveTo(220 + shiftX, 175, 256 + shiftX, 175);
+                ctx.quadraticCurveTo(295 + shiftX, 175, 318 + shiftX, 248);
+                ctx.lineTo(286 + shiftX, 256);
+                ctx.lineTo(268 + shiftX, 224);
+                ctx.lineTo(254 + shiftX, 260);
+                ctx.lineTo(238 + shiftX, 224);
+                ctx.lineTo(218 + shiftX, 256);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                // Light streaks & crystal glints
+                for (let s = 0; s < 22; s++) {
+                    const px = (Math.sin(idx * 17 + s * 31) * 0.5 + 0.5) * 512;
+                    const py = (Math.cos(idx * 23 + s * 19) * 0.5 + 0.5) * 640;
+                    const r = (s % 4) + 1.5;
+                    ctx.fillStyle = s % 2 === 0 ? '#ffffff' : t.accent;
+                    ctx.beginPath();
+                    ctx.arc(px, py, r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Subtle Diagonal Glass Specular Reflection
+                const glassSheen = ctx.createLinearGradient(0, 0, 512, 640);
+                glassSheen.addColorStop(0.2, 'rgba(255,255,255,0)');
+                glassSheen.addColorStop(0.45, 'rgba(255,255,255,0.22)');
+                glassSheen.addColorStop(0.55, 'rgba(255,255,255,0)');
+                ctx.fillStyle = glassSheen;
+                ctx.fillRect(0, 0, 512, 640);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+
+                return {
+                    title: t.title,
+                    tag: `FRAGMENT #${String(idx + 1).padStart(2, '0')}`,
+                    url: dataUrl,
+                    texture: texture
+                };
+            });
+        }
+
+        function createPortfolioMemoryArtworks() {
+            const loader = new THREE.TextureLoader();
+            return Array.from({ length: 24 }, (_, index) => {
+                const url = `waifu-memory-${String(index + 1).padStart(2, '0')}.png`;
+                const texture = loader.load(
+                    url,
+                    undefined,
+                    undefined,
+                    (error) => console.error(`Foto galeri gagal dimuat: ${url}`, error)
+                );
+                texture.encoding = THREE.sRGBEncoding;
+                texture.generateMipmaps = false;
+                texture.minFilter = THREE.LinearFilter;
+
+                return {
+                    title: `WAIFU MEMORY ${String(index + 1).padStart(2, '0')}`,
+                    tag: `FRAGMENT #${String(index + 1).padStart(2, '0')}`,
+                    url,
+                    texture
+                };
+            });
+        }
+
+        // 2. Global Scene & State Configuration
+        const container = document.getElementById('webgl-container');
+        const state = {
+            memories: [],
+            isPlaying: true,
+            trackingHudEnabled: true,
+            rotateSpeed: 1.0,
+            radiusMultiplier: 1.0,
+            scatterAmount: 0.35,
+            vortexAngle: 0,
+            vortexVelocity: 0,
+            cameraTiltX: 0.36,
+            cameraTiltY: 0,
+            targetTiltX: 0.36,
+            targetTiltY: 0,
+            parallaxX: 0,
+            parallaxY: 0,
+            cursorX: window.innerWidth * 0.5,
+            cursorY: window.innerHeight * 0.5,
+            cameraDistance: 16.8,
+            targetDistance: 16.8,
+            isDragging: false,
+            dragDistance: 0,
+            lastX: 0,
+            lastY: 0,
+            hoveredShard: null,
+            pulseWave: 0,
+            shockwaveTime: -10,
+            lightboxIndex: -1
+        };
+
+        // 3. Initialize Three.js Renderer, Scene & Camera
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x09020a, 0.022);
+
+        const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 160);
+        camera.position.set(0, 5.8, state.cameraDistance);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        container.appendChild(renderer.domElement);
+
+        // Ambient & Point Lighting
+        const ambientLight = new THREE.AmbientLight(0x3b135c, 1.4);
+        scene.add(ambientLight);
+
+        const corePointLight = new THREE.PointLight(0x22d3ee, 3.2, 40);
+        corePointLight.position.set(0, 0, 0);
+        scene.add(corePointLight);
+
+        const violetCoreLight = new THREE.PointLight(0xa855f7, 2.4, 28);
+        violetCoreLight.position.set(-1.2, 0.8, -1.5);
+        scene.add(violetCoreLight);
+
+        const crimsonRimLight = new THREE.PointLight(0xe11d48, 2.2, 55);
+        crimsonRimLight.position.set(0, -10, 4);
+        scene.add(crimsonRimLight);
+
+        // 4. Deep Crimson-Violet Cosmic Void Dome & Architectural Grid Floor
+        function createCosmicEnvironment() {
+            const envGroup = new THREE.Group();
+
+            // Background Gradient Sphere
+            const skyGeo = new THREE.SphereGeometry(75, 32, 32);
+            const skyCanvas = document.createElement('canvas');
+            skyCanvas.width = 512;
+            skyCanvas.height = 512;
+            const sCtx = skyCanvas.getContext('2d');
+            const grad = sCtx.createRadialGradient(256, 256, 20, 256, 256, 256);
+            grad.addColorStop(0, '#2a0826');
+            grad.addColorStop(0.5, '#13041b');
+            grad.addColorStop(1, '#050108');
+            sCtx.fillStyle = grad;
+            sCtx.fillRect(0, 0, 512, 512);
+            const skyTex = new THREE.CanvasTexture(skyCanvas);
+            const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, depthWrite: false });
+            envGroup.add(new THREE.Mesh(skyGeo, skyMat));
+
+            // Glowing Crimson-Red 3D Architectural Grid & Concentric Rings Below Vortex
+            const gridGroup = new THREE.Group();
+            gridGroup.position.y = -6.5;
+
+            const polarGrid = new THREE.PolarGridHelper(28, 24, 10, 64, 0x9f1239, 0x4c0519);
+            polarGrid.material.transparent = true;
+            polarGrid.material.opacity = 0.48;
+            gridGroup.add(polarGrid);
+
+            // Architectural Cuboid Wireframe Blocks arranged radially (matching reference background)
+            const blockGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.6, 1.2, 1.6));
+            const blockMat = new THREE.LineBasicMaterial({ color: 0xbe123c, transparent: true, opacity: 0.35 });
+            for (let i = 0; i < 42; i++) {
+                const angle = (i / 42) * Math.PI * 2;
+                const rad = 10 + (i % 4) * 3.2;
+                const block = new THREE.LineSegments(blockGeo, blockMat);
+                block.position.set(Math.cos(angle) * rad, (i % 3) * 0.6 - 0.5, Math.sin(angle) * rad);
+                block.rotation.y = -angle;
+                block.scale.set(0.8 + (i % 3) * 0.4, 0.6 + (i % 4) * 0.5, 0.8 + (i % 2) * 0.5);
+                gridGroup.add(block);
+            }
+
+            // Large Orbital White/Rose Halo Rings framing the cylinder
+            const ringRadii = [8.2, 11.4, 14.8];
+            ringRadii.forEach((r, idx) => {
+                const rGeo = new THREE.RingGeometry(r - 0.03, r + 0.03, 128);
+                const rMat = new THREE.MeshBasicMaterial({
+                    color: idx === 0 ? 0xfbcfe8 : 0xf43f5e,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: idx === 0 ? 0.45 : 0.25
+                });
+                const ring = new THREE.Mesh(rGeo, rMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = idx * 1.4 - 1.2;
+                envGroup.add(ring);
+            });
+
+            envGroup.add(gridGroup);
+            scene.add(envGroup);
+            return { envGroup, gridGroup };
+        }
+
+        const { gridGroup } = createCosmicEnvironment();
+
+        // 5. Central Sci-Fi Energy Core with a black-hole disk and geodesic shell
+        const coreGroup = new THREE.Group();
+        scene.add(coreGroup);
+
+        function buildCentralEnergyCore() {
+            // 5a. Multi-layered Rainbow / Iridescent Cosmic Aura Sprite
+            const auraCanvas = document.createElement('canvas');
+            auraCanvas.width = 512;
+            auraCanvas.height = 512;
+            const ctx = auraCanvas.getContext('2d');
+            const cx = 256, cy = 256;
+
+            // Outer soft magenta/violet nebula glow
+            const outerGlow = ctx.createRadialGradient(cx, cy, 20, cx, cy, 250);
+            outerGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            outerGlow.addColorStop(0.22, 'rgba(244, 114, 182, 0.85)');
+            outerGlow.addColorStop(0.45, 'rgba(139, 92, 246, 0.45)');
+            outerGlow.addColorStop(0.75, 'rgba(88, 28, 135, 0.15)');
+            outerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = outerGlow;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Iridescent Spectral Ring
+            const spectral = ctx.createRadialGradient(cx, cy, 78, cx, cy, 132);
+            spectral.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            spectral.addColorStop(0.3, 'rgba(56, 189, 248, 0.65)');
+            spectral.addColorStop(0.55, 'rgba(250, 204, 21, 0.6)');
+            spectral.addColorStop(0.8, 'rgba(244, 63, 94, 0.7)');
+            spectral.addColorStop(1, 'rgba(168, 85, 247, 0)');
+            ctx.fillStyle = spectral;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 135, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Volumetric Light Rays radiating from center
+            ctx.save();
+            ctx.translate(cx, cy);
+            for (let i = 0; i < 24; i++) {
+                ctx.rotate((Math.PI * 2) / 24);
+                const rayGrad = ctx.createLinearGradient(0, 0, 0, 220);
+                rayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+                rayGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = rayGrad;
+                ctx.beginPath();
+                ctx.moveTo(-3, 25);
+                ctx.lineTo(3, 25);
+                ctx.lineTo(14, 210);
+                ctx.lineTo(-14, 210);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+
+            const auraTex = new THREE.CanvasTexture(auraCanvas);
+            const auraMat = new THREE.SpriteMaterial({
+                map: auraTex,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const auraSprite = new THREE.Sprite(auraMat);
+            auraSprite.scale.set(8.6, 8.6, 1);
+            coreGroup.add(auraSprite);
+
+            const orbitGroup = new THREE.Group();
+            coreGroup.add(orbitGroup);
+
+            const energyOrb = new THREE.Mesh(
+                new THREE.SphereGeometry(0.66, 32, 24),
+                new THREE.MeshPhysicalMaterial({
+                    color: 0xe9a8ff,
+                    emissive: 0x8b5cf6,
+                    emissiveIntensity: 1.45,
+                    roughness: 0.18,
+                    metalness: 0.18,
+                    clearcoat: 1,
+                    transparent: true,
+                    opacity: 0.72,
+                    depthWrite: false
+                })
+            );
+            energyOrb.name = 'ENERGY_CORE_ORB';
+            orbitGroup.add(energyOrb);
+
+            const coreFlash = new THREE.Mesh(
+                new THREE.SphereGeometry(0.3, 24, 18),
+                new THREE.MeshBasicMaterial({
+                    color: 0xfff4ff,
+                    transparent: true,
+                    opacity: 0.88,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+            );
+            orbitGroup.add(coreFlash);
+
+            const coreCage = new THREE.LineSegments(
+                new THREE.EdgesGeometry(new THREE.BoxGeometry(1.95, 1.95, 1.95)),
+                new THREE.LineBasicMaterial({
+                    color: 0x67e8f9,
+                    transparent: true,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+            );
+            coreCage.rotation.set(Math.PI / 4, Math.PI / 4, 0);
+            orbitGroup.add(coreCage);
+
+            const orbitPink = new THREE.MeshBasicMaterial({
+                color: 0xa855f7,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            const orbitCyan = new THREE.MeshBasicMaterial({
+                color: 0x67e8f9,
+                transparent: true,
+                opacity: 0.76,
+                blending: THREE.AdditiveBlending
+            });
+            const orbitRing = new THREE.Mesh(new THREE.TorusGeometry(1.08, 0.012, 8, 96), orbitPink);
+            orbitRing.rotation.set(0.72, 0.15, 0.2);
+            const secondaryRing = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.008, 8, 96), orbitCyan);
+            secondaryRing.rotation.set(1.15, 0.45, -0.3);
+            orbitGroup.add(orbitRing, secondaryRing);
+
+            return {
+                auraSprite,
+                energyOrb,
+                coreFlash,
+                coreCage,
+                orbitGroup,
+                clickTargets: [energyOrb, coreFlash]
+            };
+        }
+
+        const coreElements = buildCentralEnergyCore();
+
+        // 6. Curved Asymmetric Glass Shards Orbiting in a Cylindrical Vortex
+        const vortexGroup = new THREE.Group();
+        scene.add(vortexGroup);
+
+        const shardObjects = []; // Stores metadata for animation, radius/scatter updates, and raycasting
+        const interactiveMeshes = []; // Photo-bearing shards for hover & click inspection
+
+        /**
+         * Creates a custom curved polygonal glass shard geometry with UV mapping
+         * so uploaded or procedural photos map cleanly across the irregular glass facet.
+         */
+        function createCurvedPolygonalShardGeometry(width, height, curveRadius, vertexCount, seed) {
+            // Generate irregular convex/faceted polygon points in normalized [-0.5, 0.5] space
+            const poly2D = [];
+            for (let i = 0; i < vertexCount; i++) {
+                const baseAngle = (i / vertexCount) * Math.PI * 2 + (seed * 0.7);
+                const jitterR = 0.36 + ((Math.sin(seed * 13.7 + i * 5.3) * 0.5 + 0.5) * 0.18);
+                poly2D.push({
+                    x: Math.cos(baseAngle) * jitterR,
+                    y: Math.sin(baseAngle) * jitterR
+                });
+            }
+
+            // Subdivide polygon into a fan from center (0,0) so it curves smoothly along the cylinder arc
+            const positions = [];
+            const uvs = [];
+            const indices = [];
+
+            const rings = 4; // Radial subdivisions for smooth cylindrical curvature
+            // Center vertex (index 0)
+            positions.push(0, 0, 0);
+            uvs.push(0.5, 0.5);
+
+            for (let r = 1; r <= rings; r++) {
+                const t = r / rings;
+                for (let i = 0; i < vertexCount; i++) {
+                    const nx = poly2D[i].x * t;
+                    const ny = poly2D[i].y * t;
+
+                    const localX = nx * width;
+                    const localY = ny * height;
+
+                    // Bend along cylinder radius
+                    const arcAngle = localX / curveRadius;
+                    const curvedX = Math.sin(arcAngle) * curveRadius;
+                    const curvedZ = (Math.cos(arcAngle) - 1) * curveRadius;
+
+                    positions.push(curvedX, localY, curvedZ);
+                    uvs.push(nx + 0.5, ny + 0.5);
+                }
+            }
+
+            // Inner fan triangles
+            for (let i = 0; i < vertexCount; i++) {
+                const next = (i + 1) % vertexCount;
+                indices.push(0, 1 + i, 1 + next);
+            }
+
+            // Outer ring quads
+            for (let r = 1; r < rings; r++) {
+                const rowStart = 1 + (r - 1) * vertexCount;
+                const nextRowStart = 1 + r * vertexCount;
+                for (let i = 0; i < vertexCount; i++) {
+                    const next = (i + 1) % vertexCount;
+                    const a = rowStart + i;
+                    const b = rowStart + next;
+                    const c = nextRowStart + next;
+                    const d = nextRowStart + i;
+                    indices.push(a, d, c);
+                    indices.push(a, c, b);
+                }
+            }
+
+            // Perimeter rim points for glowing neon edge LineLoop
+            const rimPoints = [];
+            const outerStart = 1 + (rings - 1) * vertexCount;
+            for (let i = 0; i < vertexCount; i++) {
+                const idx = (outerStart + i) * 3;
+                rimPoints.push(new THREE.Vector3(positions[idx], positions[idx + 1], positions[idx + 2]));
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            geo.setIndex(indices);
+            geo.computeVertexNormals();
+
+            return { geometry: geo, rimPoints };
+        }
+
+        /**
+         * Creates glittering disintegration dust clusters along one edge of a glass shard
+         */
+        function createShardDisintegrationParticles(rimPoints, isHero) {
+            const count = isHero ? 55 : 22;
+            const posArray = new Float32Array(count * 3);
+            const edgeIdx = Math.floor(Math.random() * rimPoints.length);
+            const pA = rimPoints[edgeIdx];
+            const pB = rimPoints[(edgeIdx + 1) % rimPoints.length];
+
+            for (let i = 0; i < count; i++) {
+                const lerp = Math.random();
+                const spread = (Math.random() - 0.35) * (isHero ? 0.65 : 0.35);
+                const x = pA.x + (pB.x - pA.x) * lerp + (Math.random() - 0.5) * 0.45 + spread;
+                const y = pA.y + (pB.y - pA.y) * lerp + (Math.random() - 0.5) * 0.45;
+                const z = pA.z + (pB.z - pA.z) * lerp + (Math.random() - 0.5) * 0.35;
+
+                posArray[i * 3] = x;
+                posArray[i * 3 + 1] = y;
+                posArray[i * 3 + 2] = z;
+            }
+
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+            const pMat = new THREE.PointsMaterial({
+                color: isHero ? 0xfbcfe8 : 0xc084fc,
+                size: isHero ? 0.085 : 0.06,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            return new THREE.Points(pGeo, pMat);
+        }
+
+        /**
+         * Builds the 46-shard multi-layered cylindrical vortex
+         */
+        function buildGlassVortex() {
+            // Clear existing shards
+            while (vortexGroup.children.length > 0) {
+                vortexGroup.remove(vortexGroup.children[0]);
+            }
+            shardObjects.length = 0;
+            interactiveMeshes.length = 0;
+
+            const totalShards = 46;
+            const photoCount = state.memories.length;
+
+            // Size archetypes matching the dramatic shattered-glass vortex composition
+            const archetypes = [
+                { type: 'hero', w: 3.1, h: 3.8, verts: 5, hasPhoto: true },
+                { type: 'hero-wide', w: 3.6, h: 2.7, verts: 6, hasPhoto: true },
+                { type: 'medium', w: 2.3, h: 2.9, verts: 5, hasPhoto: true },
+                { type: 'crystal-dark', w: 1.45, h: 1.9, verts: 5, hasPhoto: false },
+                { type: 'crystal-sliver', w: 0.95, h: 1.65, verts: 4, hasPhoto: false }
+            ];
+
+            let photoAssignIndex = 0;
+
+            for (let i = 0; i < totalShards; i++) {
+                // Distribute roughly 22 photo shards and 20 dark-violet translucent crystal shards
+                let arch;
+                if (i % 2 === 0 || i % 5 === 0) {
+                    arch = archetypes[i % 3]; // Hero or medium photo shard
+                } else {
+                    arch = archetypes[3 + (i % 2)]; // Dark crystal shard
+                }
+
+                const baseTheta = (i / totalShards) * Math.PI * 2 + (Math.sin(i * 3.1) * 0.14);
+                // Multi-ring depth: inner vortex ring & outer shattered ring
+                const layerRing = i % 3; // 0 = inner, 1 = mid, 2 = outer
+                const baseRadius = 5.6 + layerRing * 1.65 + (Math.cos(i * 2.3) * 0.45);
+                const baseY = ((i % 5) - 2) * 1.15 + Math.sin(i * 1.9) * 0.65;
+
+                // Random dispersion vectors for the SCATTER slider
+                const scatterDir = new THREE.Vector3(
+                    Math.cos(baseTheta) * (0.8 + (i % 3) * 0.4),
+                    ((i % 7) - 3) * 0.85,
+                    Math.sin(baseTheta) * (0.8 + (i % 3) * 0.4)
+                );
+
+                const { geometry, rimPoints } = createCurvedPolygonalShardGeometry(
+                    arch.w,
+                    arch.h,
+                    baseRadius,
+                    arch.verts,
+                    i + 1.3
+                );
+
+                let material;
+                let memoryIndex = -1;
+
+                if (arch.hasPhoto && photoCount > 0) {
+                    memoryIndex = photoAssignIndex % photoCount;
+                    photoAssignIndex++;
+                    const mem = state.memories[memoryIndex];
+
+                    material = new THREE.MeshBasicMaterial({
+                        map: mem.texture,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.95
+                    });
+                } else {
+                    // Dark-violet translucent crystal shard
+                    material = new THREE.MeshPhysicalMaterial({
+                        color: i % 2 === 0 ? 0x2e0b4e : 0x1c0733,
+                        emissive: 0x3b0764,
+                        emissiveIntensity: 0.45,
+                        roughness: 0.15,
+                        metalness: 0.2,
+                        transparent: true,
+                        opacity: 0.78,
+                        side: THREE.DoubleSide
+                    });
+                }
+
+                const shardHolder = new THREE.Group();
+                const mesh = new THREE.Mesh(geometry, material);
+
+                // Bright Neon Rim Outline around every glass facet
+                const rimGeo = new THREE.BufferGeometry().setFromPoints(rimPoints);
+                const rimMat = new THREE.LineBasicMaterial({
+                    color: arch.hasPhoto ? 0xf5d0fe : 0xa855f7,
+                    transparent: true,
+                    opacity: arch.hasPhoto ? 0.92 : 0.65
+                });
+                const rimLoop = new THREE.LineLoop(rimGeo, rimMat);
+                rimLoop.position.z = 0.015;
+                mesh.add(rimLoop);
+
+                // Glittering edge disintegration particles
+                const edgeParticles = createShardDisintegrationParticles(rimPoints, arch.hasPhoto);
+                mesh.add(edgeParticles);
+
+                shardHolder.add(mesh);
+
+                // Initial organic tilt matching shattered vortex perspective
+                const baseTiltX = Math.sin(i * 2.1) * 0.28;
+                const baseTiltY = Math.cos(i * 1.7) * 0.22;
+                const baseTiltZ = Math.sin(i * 2.9) * 0.32;
+
+                mesh.userData = {
+                    isPhotoShard: arch.hasPhoto,
+                    memoryIndex: memoryIndex,
+                    rimMat: rimMat,
+                    shardHolder: shardHolder
+                };
+
+                if (arch.hasPhoto) {
+                    interactiveMeshes.push(mesh);
+                }
+
+                vortexGroup.add(shardHolder);
+
+                shardObjects.push({
+                    holder: shardHolder,
+                    mesh: mesh,
+                    rimMat: rimMat,
+                    baseTheta,
+                    baseRadius,
+                    baseY,
+                    scatterDir,
+                    baseTiltX,
+                    baseTiltY,
+                    baseTiltZ,
+                    floatPhase: i * 0.85,
+                    hasPhoto: arch.hasPhoto
+                });
+            }
+
+            updateShardTransforms(0);
+        }
+
+        /**
+         * Updates all 3D shard positions & rotations based on RADIUS, SCATTER, Shockwave, and time
+         */
+        function updateShardTransforms(time) {
+            const rMult = state.radiusMultiplier;
+            const scatter = state.scatterAmount;
+            const waveElapsed = time - state.shockwaveTime;
+
+            for (let i = 0; i < shardObjects.length; i++) {
+                const s = shardObjects[i];
+                const floatY = Math.sin(time * 1.4 + s.floatPhase) * 0.16;
+
+                // Outward energy shockwave ripple triggered by clicking the central core
+                let rippleBoost = 0;
+                if (waveElapsed >= 0 && waveElapsed < 2.2) {
+                    const distFactor = (s.baseRadius - 5.0) * 0.12;
+                    const localWave = waveElapsed - distFactor;
+                    if (localWave > 0 && localWave < 1.2) {
+                        rippleBoost = Math.sin((localWave / 1.2) * Math.PI) * 1.15;
+                    }
+                }
+
+                const effectiveRadius = (s.baseRadius * rMult) + (scatter * 1.9 * ((i % 3) - 0.5)) + rippleBoost;
+                const theta = s.baseTheta + (scatter * 0.12 * Math.sin(s.floatPhase));
+
+                const x = Math.cos(theta) * effectiveRadius + s.scatterDir.x * scatter * 0.55;
+                const z = Math.sin(theta) * effectiveRadius + s.scatterDir.z * scatter * 0.55;
+                const y = s.baseY + floatY + s.scatterDir.y * scatter * 1.15;
+
+                s.holder.position.set(x, y, z);
+
+                // Face inward/outward along cylinder tangent + dramatic vortex tilt
+                s.holder.lookAt(0, y * 0.35, 0);
+                s.holder.rotateY(Math.PI);
+
+                s.mesh.rotation.set(
+                    s.baseTiltX * (0.6 + scatter * 0.85) + Math.sin(time + s.floatPhase) * 0.04,
+                    s.baseTiltY * (0.6 + scatter * 0.85),
+                    s.baseTiltZ * (0.6 + scatter * 0.85) + Math.cos(time * 0.8 + s.floatPhase) * 0.04
+                );
+            }
+        }
+
+        // 7. Ambient Cosmic Ember & Crystal Dust Particles
+        function createCosmicDustField() {
+            const count = 650;
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+
+            const cPink = new THREE.Color(0xf472b6);
+            const cViolet = new THREE.Color(0xa855f7);
+            const cWhite = new THREE.Color(0xffffff);
+
+            for (let i = 0; i < count; i++) {
+                const r = 2.5 + Math.random() * 22;
+                const theta = Math.random() * Math.PI * 2;
+                const y = (Math.random() - 0.5) * 16;
+
+                positions[i * 3] = Math.cos(theta) * r;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = Math.sin(theta) * r;
+
+                const pick = i % 3 === 0 ? cWhite : (i % 3 === 1 ? cPink : cViolet);
+                colors[i * 3] = pick.r;
+                colors[i * 3 + 1] = pick.g;
+                colors[i * 3 + 2] = pick.b;
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.11,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.78,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const points = new THREE.Points(geo, mat);
+            scene.add(points);
+            return points;
+        }
+
+        const cosmicDust = createCosmicDustField();
+
+        // 8. Raycasting for Hover Highlight, Lightbox Click & Center Core Energy Pulse
+        const raycaster = new THREE.Raycaster();
+        const pointerNDC = new THREE.Vector2();
+        const tooltip = document.getElementById('shard-tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+
+        function handlePointerHover(clientX, clientY) {
+            if (state.isDragging || state.lightboxIndex !== -1) {
+                tooltip.style.opacity = '0';
+                return;
+            }
+
+            pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+            pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(pointerNDC, camera);
+            const intersects = raycaster.intersectObjects(interactiveMeshes, false);
+
+            // Reset previous hover highlight
+            if (state.hoveredShard && (!intersects.length || intersects[0].object !== state.hoveredShard)) {
+                state.hoveredShard.userData.rimMat.color.setHex(0xf5d0fe);
+                state.hoveredShard.scale.set(1, 1, 1);
+                state.hoveredShard = null;
+                container.style.cursor = 'grab';
+                tooltip.style.opacity = '0';
+            }
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                state.hoveredShard = hit;
+                hit.userData.rimMat.color.setHex(0xffffff);
+                hit.scale.set(1.06, 1.06, 1.06);
+                container.style.cursor = 'pointer';
+
+                const mem = state.memories[hit.userData.memoryIndex];
+                if (mem) {
+                    tooltipTitle.textContent = `${mem.tag} — ${mem.title}`;
+                    tooltip.style.left = `${Math.min(window.innerWidth - 210, clientX + 16)}px`;
+                    tooltip.style.top = `${Math.max(70, clientY - 12)}px`;
+                    tooltip.style.opacity = '1';
+                }
+            }
+        }
+
+        function handleCanvasClick(clientX, clientY) {
+            if (state.dragDistance > 7) return;
+
+            pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+            pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointerNDC, camera);
+
+            // Check if user clicked the energy core
+            const coreHit = raycaster.intersectObjects(coreElements.clickTargets, false);
+            if (coreHit.length > 0) {
+                state.pulseWave = 1.0;
+                state.shockwaveTime = clock.getElapsedTime();
+                state.vortexVelocity += 0.045;
+                showHudToast('CORE RESONANCE SHOCKWAVE ACTIVATED');
+                return;
+            }
+
+            // Check if user clicked a Photo Shard
+            const shardHits = raycaster.intersectObjects(interactiveMeshes, false);
+            if (shardHits.length > 0) {
+                const memIdx = shardHits[0].object.userData.memoryIndex;
+                if (memIdx >= 0) {
+                    openLightbox(memIdx);
+                }
+            }
+        }
+
+        // 9. Pointer Drag, Inertia & Scroll Zoom Controls
+        container.addEventListener('pointerdown', (e) => {
+            state.isDragging = true;
+            state.dragDistance = 0;
+            state.lastX = e.clientX;
+            state.lastY = e.clientY;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            // Track raw cursor coordinates for 2D Tracking HUD & Lightbox boxes
+            state.cursorX = e.clientX;
+            state.cursorY = e.clientY;
+
+            // Normalized mouse coordinates for subtle camera parallax
+            state.parallaxX = ((e.clientX / window.innerWidth) - 0.5) * 0.08;
+            state.parallaxY = ((e.clientY / window.innerHeight) - 0.5) * 0.06;
+
+            if (state.isDragging) {
+                const dx = e.clientX - state.lastX;
+                const dy = e.clientY - state.lastY;
+                state.dragDistance += Math.hypot(dx, dy);
+
+                state.vortexAngle += dx * 0.0055;
+                state.vortexVelocity = dx * 0.0032;
+                state.targetTiltX = Math.max(-0.45, Math.min(0.75, state.targetTiltX + dy * 0.0035));
+
+                state.lastX = e.clientX;
+                state.lastY = e.clientY;
+            } else {
+                handlePointerHover(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('pointerup', (e) => {
+            if (state.isDragging) {
+                state.isDragging = false;
+                handleCanvasClick(e.clientX, e.clientY);
+            }
+        });
+
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            state.targetDistance = Math.max(9.5, Math.min(28.0, state.targetDistance + e.deltaY * 0.008));
+        }, { passive: false });
+
+        // 10. HUD Sliders, Buttons, Photo Upload & Modals
+        const ctrlSpeed = document.getElementById('ctrl-speed');
+        const ctrlRadius = document.getElementById('ctrl-radius');
+        const ctrlScatter = document.getElementById('ctrl-scatter');
+        const lblSpeed = document.getElementById('lbl-speed');
+        const lblRadius = document.getElementById('lbl-radius');
+        const lblScatter = document.getElementById('lbl-scatter');
+
+        ctrlSpeed.addEventListener('input', (e) => {
+            state.rotateSpeed = parseFloat(e.target.value);
+            lblSpeed.textContent = `${state.rotateSpeed.toFixed(1)}x`;
+            if (state.rotateSpeed !== 0 && !state.isPlaying) {
+                state.isPlaying = true;
+            }
+        });
+
+        ctrlRadius.addEventListener('input', (e) => {
+            state.radiusMultiplier = parseFloat(e.target.value);
+            lblRadius.textContent = `${Math.round(state.radiusMultiplier * 100)}%`;
+        });
+
+        ctrlScatter.addEventListener('input', (e) => {
+            state.scatterAmount = parseFloat(e.target.value);
+            lblScatter.textContent = `${Math.round((state.scatterAmount / 1.5) * 100)}%`;
+        });
+
+        document.getElementById('btn-play-pause').addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            showHudToast(state.isPlaying ? 'VORTEX ORBIT: PLAYING' : 'VORTEX ORBIT: PAUSED');
+        });
+
+        document.getElementById('btn-spin-boost').addEventListener('click', () => {
+            state.vortexVelocity += 0.065;
+            state.pulseWave = 0.65;
+            showHudToast('VORTEX IMPULSE BOOST');
+        });
+
+        // Toggle Tracking HUD (Bounding Boxes + CRT Scanlines + Rainbow Prism Flare)
+        const btnTrackingHud = document.getElementById('btn-tracking-hud');
+        const trackingCanvas = document.getElementById('tracking-hud-canvas');
+        const trackingCtx = trackingCanvas.getContext('2d');
+        const crtOverlay = document.getElementById('crt-overlay');
+        const prismOverlay = document.getElementById('prism-overlay');
+        const lbTrackingCanvas = document.getElementById('lb-tracking-canvas');
+        const lbTrackingCtx = lbTrackingCanvas.getContext('2d');
+        const lbCrtSheen = document.getElementById('lb-crt-sheen');
+
+        btnTrackingHud.addEventListener('click', () => {
+            state.trackingHudEnabled = !state.trackingHudEnabled;
+            btnTrackingHud.textContent = state.trackingHudEnabled ? 'TRACKING HUD: ON' : 'TRACKING HUD: OFF';
+
+            const visOpacity = state.trackingHudEnabled ? '1' : '0';
+            trackingCanvas.style.opacity = visOpacity;
+            crtOverlay.style.opacity = visOpacity;
+            prismOverlay.style.opacity = visOpacity;
+            lbTrackingCanvas.style.opacity = visOpacity;
+            lbCrtSheen.style.opacity = visOpacity;
+
+            if (state.trackingHudEnabled) {
+                btnTrackingHud.classList.remove('bg-white/[0.04]', 'border-white/25', 'text-white/70');
+                btnTrackingHud.classList.add('bg-violet-600/35', 'border-violet-300/70', 'text-violet-100');
+            } else {
+                btnTrackingHud.classList.add('bg-white/[0.04]', 'border-white/25', 'text-white/70');
+                btnTrackingHud.classList.remove('bg-violet-600/35', 'border-violet-300/70', 'text-violet-100');
+            }
+
+            showHudToast(state.trackingHudEnabled ? 'MEMORY TRACKING HUD: ENABLED' : 'MEMORY TRACKING HUD: DISABLED');
+        });
+
+        // Deterministic pseudo-random helper for crisp motion-tracking sub-boxes
+        function seededRand(seed) {
+            const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
+            return x - Math.floor(x);
+        }
+
+        /**
+         * Renders After Effects / Honkai Star Rail style overlapping motion-tracking bounding boxes,
+         * translucent lime-green focal patches, electric-blue anchor boxes, and white vector lines.
+         */
+        function renderMotionTrackingHUD(elapsed) {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            if (trackingCanvas.width !== w || trackingCanvas.height !== h) {
+                trackingCanvas.width = w;
+                trackingCanvas.height = h;
+            }
+
+            trackingCtx.clearRect(0, 0, w, h);
+            if (!state.trackingHudEnabled || state.lightboxIndex !== -1) return;
+
+            const anchors = [];
+            const tempVec = new THREE.Vector3();
+
+            // Project key 3D shards to 2D screen coordinates
+            for (let i = 0; i < shardObjects.length; i += 2) {
+                const s = shardObjects[i];
+                s.holder.getWorldPosition(tempVec);
+                tempVec.project(camera);
+
+                // Keep only shards in front of camera and within viewport bounds
+                if (tempVec.z > 1 || tempVec.x < -1.15 || tempVec.x > 1.15 || tempVec.y < -1.15 || tempVec.y > 1.15) {
+                    continue;
+                }
+
+                const sx = (tempVec.x * 0.5 + 0.5) * w;
+                const sy = (-tempVec.y * 0.5 + 0.5) * h;
+                const scaleFactor = s.hasPhoto ? 1.0 : 0.62;
+
+                // 1. Soft translucent lime-green focal patch on select shards (inspired by ref 3)
+                if (s.hasPhoto && i % 6 === 0) {
+                    const gw = (52 + seededRand(i + 1) * 44) * scaleFactor;
+                    const gh = (58 + seededRand(i + 2) * 48) * scaleFactor;
+                    const gx = sx - gw * 0.5 + Math.sin(elapsed * 2 + i) * 4;
+                    const gy = sy - gh * 0.5 + Math.cos(elapsed * 1.8 + i) * 4;
+
+                    trackingCtx.fillStyle = 'rgba(140, 230, 110, 0.14)';
+                    trackingCtx.fillRect(gx, gy, gw, gh);
+                    trackingCtx.strokeStyle = 'rgba(175, 245, 145, 0.35)';
+                    trackingCtx.lineWidth = 0.9;
+                    trackingCtx.strokeRect(gx, gy, gw, gh);
+                }
+
+                // 2. Dense cluster of overlapping violet/magenta wireframe tracking rectangles (inspired by ref 1 & 2)
+                const subCount = s.hasPhoto ? 5 : 3;
+                for (let b = 0; b < subCount; b++) {
+                    const seed = i * 19 + b * 7;
+                    const bw = (14 + seededRand(seed + 1) * 46) * scaleFactor;
+                    const bh = (12 + seededRand(seed + 2) * 52) * scaleFactor;
+                    const jitterX = (seededRand(seed + 3) - 0.5) * 64 * scaleFactor + Math.sin(elapsed * 3.2 + seed) * 2.5;
+                    const jitterY = (seededRand(seed + 4) - 0.5) * 68 * scaleFactor + Math.cos(elapsed * 2.7 + seed) * 2.5;
+
+                    const bx = sx + jitterX - bw * 0.5;
+                    const by = sy + jitterY - bh * 0.5;
+
+                    trackingCtx.strokeStyle = b % 2 === 0 ? 'rgba(192, 92, 255, 0.72)' : 'rgba(217, 102, 255, 0.52)';
+                    trackingCtx.lineWidth = 1;
+                    trackingCtx.strokeRect(bx, by, bw, bh);
+                }
+
+                // 3. Electric Blue Anchor Box with corner markers + tiny red/orange tracking dot
+                if (s.hasPhoto && i % 4 === 0) {
+                    const aw = 24;
+                    const ah = 18;
+                    const ax = sx + Math.cos(elapsed * 1.5 + i) * 18 - aw * 0.5;
+                    const ay = sy + Math.sin(elapsed * 1.5 + i) * 18 - ah * 0.5;
+
+                    trackingCtx.strokeStyle = 'rgba(72, 145, 255, 0.92)';
+                    trackingCtx.lineWidth = 1.25;
+                    trackingCtx.strokeRect(ax, ay, aw, ah);
+
+                    // Tiny red/orange tracking node inside blue box
+                    trackingCtx.fillStyle = '#ff4d4d';
+                    trackingCtx.fillRect(ax + aw * 0.55, ay + ah * 0.42, 4, 2.5);
+
+                    anchors.push({ x: ax + aw * 0.5, y: ay + ah * 0.5 });
+                }
+            }
+
+            // 4. Crisp white vector tracking lines connecting distant anchor squares (inspired by ref 3)
+            if (anchors.length >= 2) {
+                trackingCtx.save();
+                trackingCtx.strokeStyle = 'rgba(255, 255, 255, 0.58)';
+                trackingCtx.lineWidth = 1;
+                trackingCtx.beginPath();
+
+                const maxLinks = Math.min(anchors.length, 7);
+                for (let k = 0; k < maxLinks; k++) {
+                    const a1 = anchors[k];
+                    const a2 = anchors[(k + 2) % maxLinks];
+                    trackingCtx.moveTo(a1.x, a1.y);
+                    trackingCtx.lineTo(a2.x, a2.y);
+                }
+                trackingCtx.stroke();
+
+                // Tiny square anchor nodes & diamond telemetry markers along vector vertices
+                for (let k = 0; k < maxLinks; k++) {
+                    const pt = anchors[k];
+                    trackingCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                    trackingCtx.strokeRect(pt.x - 3.5, pt.y - 3.5, 7, 7);
+                }
+                trackingCtx.restore();
+            }
+
+            // 5. Subtle diamond telemetry glyph cluster near active cursor (◆ · ·)
+            const cx = state.cursorX;
+            const cy = state.cursorY;
+            trackingCtx.save();
+            trackingCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            trackingCtx.translate(cx - 26, cy);
+            trackingCtx.rotate(Math.PI / 4);
+            trackingCtx.fillRect(-2.5, -2.5, 5, 5);
+            trackingCtx.restore();
+
+            trackingCtx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            trackingCtx.beginPath();
+            trackingCtx.arc(cx - 14, cy, 1.6, 0, Math.PI * 2);
+            trackingCtx.arc(cx - 5, cy, 1.4, 0, Math.PI * 2);
+            trackingCtx.fill();
+        }
+
+        /**
+         * Renders interactive motion-tracking boxes & vector lines inside the Lightbox preview modal
+         */
+        function renderLightboxTrackingOverlay(elapsed) {
+            if (!state.trackingHudEnabled || state.lightboxIndex === -1) return;
+            const rect = lbTrackingCanvas.getBoundingClientRect();
+            const w = Math.max(1, Math.floor(rect.width));
+            const h = Math.max(1, Math.floor(rect.height));
+
+            if (lbTrackingCanvas.width !== w || lbTrackingCanvas.height !== h) {
+                lbTrackingCanvas.width = w;
+                lbTrackingCanvas.height = h;
+            }
+
+            lbTrackingCtx.clearRect(0, 0, w, h);
+
+            const normX = (state.cursorX - rect.left) / w;
+            const normY = (state.cursorY - rect.top) / h;
+            const parallaxX = (normX - 0.5) * 18;
+            const parallaxY = (normY - 0.5) * 18;
+
+            const focalPoints = [
+                { x: w * 0.28 + parallaxX, y: h * 0.34 + parallaxY, green: true },
+                { x: w * 0.52 - parallaxX * 0.7, y: h * 0.45 + parallaxY * 0.8, green: false },
+                { x: w * 0.74 + parallaxX * 0.9, y: h * 0.62 - parallaxY, green: true },
+                { x: w * 0.36 - parallaxX * 0.5, y: h * 0.72 + parallaxY * 0.6, green: false }
+            ];
+
+            const lbAnchors = [];
+
+            focalPoints.forEach((fp, idx) => {
+                if (fp.green) {
+                    lbTrackingCtx.fillStyle = 'rgba(140, 230, 110, 0.16)';
+                    lbTrackingCtx.fillRect(fp.x - 42, fp.y - 36, 84, 72);
+                    lbTrackingCtx.strokeStyle = 'rgba(175, 245, 145, 0.4)';
+                    lbTrackingCtx.lineWidth = 1;
+                    lbTrackingCtx.strokeRect(fp.x - 42, fp.y - 36, 84, 72);
+                }
+
+                // Overlapping violet wireframe boxes
+                for (let b = 0; b < 7; b++) {
+                    const seed = (state.lightboxIndex + 1) * 31 + idx * 13 + b * 5;
+                    const bw = 18 + seededRand(seed + 1) * 58;
+                    const bh = 16 + seededRand(seed + 2) * 64;
+                    const ox = (seededRand(seed + 3) - 0.5) * 85 + Math.sin(elapsed * 2.5 + seed) * 2;
+                    const oy = (seededRand(seed + 4) - 0.5) * 85 + Math.cos(elapsed * 2.2 + seed) * 2;
+
+                    lbTrackingCtx.strokeStyle = b % 2 === 0 ? 'rgba(192, 92, 255, 0.78)' : 'rgba(224, 110, 255, 0.55)';
+                    lbTrackingCtx.lineWidth = 1;
+                    lbTrackingCtx.strokeRect(fp.x + ox - bw * 0.5, fp.y + oy - bh * 0.5, bw, bh);
+                }
+
+                // Electric blue anchor box + red dot
+                const bx = fp.x + 14;
+                const by = fp.y - 10;
+                lbTrackingCtx.strokeStyle = 'rgba(72, 145, 255, 0.95)';
+                lbTrackingCtx.lineWidth = 1.3;
+                lbTrackingCtx.strokeRect(bx - 13, by - 9, 26, 18);
+
+                lbTrackingCtx.fillStyle = '#ff4d4d';
+                lbTrackingCtx.fillRect(bx + 2, by - 2, 4.5, 2.5);
+
+                lbAnchors.push({ x: bx, y: by });
+            });
+
+            // White vector lines connecting focal anchor points
+            lbTrackingCtx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            lbTrackingCtx.lineWidth = 1;
+            lbTrackingCtx.beginPath();
+            lbTrackingCtx.moveTo(lbAnchors[0].x, lbAnchors[0].y);
+            lbTrackingCtx.lineTo(lbAnchors[2].x, lbAnchors[2].y);
+            lbTrackingCtx.moveTo(lbAnchors[1].x, lbAnchors[1].y);
+            lbTrackingCtx.lineTo(lbAnchors[3].x, lbAnchors[3].y);
+            lbTrackingCtx.moveTo(lbAnchors[0].x, lbAnchors[0].y);
+            lbTrackingCtx.lineTo(lbAnchors[1].x, lbAnchors[1].y);
+            lbTrackingCtx.stroke();
+        }
+
+        // Top Navigation Actions
+        function resetCameraView() {
+            state.targetTiltX = 0.36;
+            state.targetTiltY = 0;
+            state.targetDistance = 16.8;
+            state.pulseWave = 0.8;
+            state.shockwaveTime = clock.getElapsedTime();
+            showHudToast('CAMERA RESET TO VORTEX CORE');
+        }
+
+        document.getElementById('nav-explore').addEventListener('click', resetCameraView);
+        // Toast Helper
+        let toastTimeout;
+        function showHudToast(msg) {
+            const toast = document.getElementById('hud-toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2600);
+        }
+
+        // Lightbox Modal Controls
+        const lightboxModal = document.getElementById('lightbox-modal');
+        const lbImage = document.getElementById('lb-image');
+        const lbTitle = document.getElementById('lb-title');
+        const lbMeta = document.getElementById('lb-meta');
+
+        function openLightbox(index) {
+            state.lightboxIndex = index;
+            updateLightboxDisplay();
+            lightboxModal.classList.remove('hidden');
+            lightboxModal.classList.add('flex');
+        }
+
+        function closeLightbox() {
+            state.lightboxIndex = -1;
+            lightboxModal.classList.add('hidden');
+            lightboxModal.classList.remove('flex');
+        }
+
+        function updateLightboxDisplay() {
+            const mem = state.memories[state.lightboxIndex];
+            if (!mem) return;
+            lbImage.src = mem.url;
+            lbTitle.textContent = mem.title;
+            lbMeta.textContent = `${mem.tag} // SHATTERED MEMORY ARCHIVE (${state.lightboxIndex + 1} / ${state.memories.length})`;
+        }
+
+        document.getElementById('lb-close').addEventListener('click', closeLightbox);
+        document.getElementById('lb-prev').addEventListener('click', () => {
+            state.lightboxIndex = (state.lightboxIndex - 1 + state.memories.length) % state.memories.length;
+            updateLightboxDisplay();
+        });
+        document.getElementById('lb-next').addEventListener('click', () => {
+            state.lightboxIndex = (state.lightboxIndex + 1) % state.memories.length;
+            updateLightboxDisplay();
+        });
+
+        lightboxModal.addEventListener('click', (e) => {
+            if (e.target === lightboxModal) closeLightbox();
+        });
+
+        // Gallery Grid Modal Controls
+        const gridModal = document.getElementById('grid-modal');
+        const galleryGrid = document.getElementById('gallery-grid');
+        const modalHeading = document.getElementById('modal-heading');
+        const modalSubheading = document.getElementById('modal-subheading');
+
+        document.getElementById('nav-gallery').addEventListener('click', () => {
+            modalHeading.textContent = 'SHARD ARCHIVE';
+            modalSubheading.textContent = 'Semua fragmen memori yang mengorbit di dalam pusaran tabung 3D';
+            galleryGrid.classList.remove('hidden');
+
+            galleryGrid.innerHTML = '';
+            state.memories.forEach((mem, idx) => {
+                const card = document.createElement('div');
+                card.className = 'group cursor-pointer rounded-xl overflow-hidden bg-fuchsia-950/30 border border-fuchsia-500/30 hover:border-fuchsia-300 transition shadow-lg';
+                card.innerHTML = `
+                    <div class="aspect-[4/5] overflow-hidden relative">
+                        <img src="${mem.url}" alt="${mem.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#090212] via-transparent to-transparent opacity-80"></div>
+                        <div class="absolute bottom-2.5 left-3 right-3">
+                            <span class="block font-hud text-[10px] tracking-widest text-fuchsia-300">${mem.tag}</span>
+                            <span class="block font-hud text-sm font-bold tracking-wider text-white truncate">${mem.title}</span>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    gridModal.classList.add('hidden');
+                    gridModal.classList.remove('flex');
+                    openLightbox(idx);
+                });
+                galleryGrid.appendChild(card);
+            });
+
+            gridModal.classList.remove('hidden');
+            gridModal.classList.add('flex');
+        });
+
+        document.getElementById('grid-close').addEventListener('click', () => {
+            gridModal.classList.add('hidden');
+            gridModal.classList.remove('flex');
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                gridModal.classList.add('hidden');
+                gridModal.classList.remove('flex');
+            }
+        });
+
+        // 11. Main 60FPS Animation Loop & Responsive Resize
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsed = clock.getElapsedTime();
+
+            // Smooth camera zoom, tilt & subtle mouse parallax interpolation
+            state.cameraDistance += (state.targetDistance - state.cameraDistance) * 0.08;
+            state.cameraTiltX += ((state.targetTiltX + state.parallaxY) - state.cameraTiltX) * 0.08;
+            state.cameraTiltY += ((state.targetTiltY + state.parallaxX) - state.cameraTiltY) * 0.08;
+
+            camera.position.x = Math.sin(state.cameraTiltY) * state.cameraDistance;
+            camera.position.y = Math.sin(state.cameraTiltX) * state.cameraDistance;
+            camera.position.z = Math.cos(state.cameraTiltX) * Math.cos(state.cameraTiltY) * state.cameraDistance;
+            camera.lookAt(0, 0, 0);
+
+            // Auto-rotation + drag momentum
+            if (!state.isDragging) {
+                state.vortexAngle += state.vortexVelocity;
+                state.vortexVelocity *= 0.94;
+
+                if (state.isPlaying && !state.hoveredShard && state.lightboxIndex === -1) {
+                    state.vortexAngle += 0.0038 * state.rotateSpeed;
+                }
+            }
+
+            vortexGroup.rotation.y = state.vortexAngle;
+            // Subtle dramatic vortex lean matching reference screenshot
+            vortexGroup.rotation.z = 0.14;
+            vortexGroup.rotation.x = 0.08;
+
+            // Update shard positions & floating motion
+            updateShardTransforms(elapsed);
+
+            // Pulse the energy core and its orbiting field
+            if (state.pulseWave > 0.001) {
+                state.pulseWave *= 0.93;
+            }
+            const pulseScale = 1 + Math.sin(elapsed * 3) * 0.04 + state.pulseWave * 0.45;
+            coreElements.auraSprite.scale.set(8.6 * pulseScale, 8.6 * pulseScale, 1);
+            coreElements.energyOrb.scale.setScalar(1 + Math.sin(elapsed * 2.4) * 0.035 + state.pulseWave * 0.12);
+            coreElements.coreFlash.scale.setScalar(1 + Math.sin(elapsed * 2.4) * 0.08 + state.pulseWave * 0.14);
+            coreElements.coreCage.rotation.x = Math.PI / 4 + Math.sin(elapsed * 0.35) * 0.08;
+            coreElements.coreCage.rotation.z = Math.sin(elapsed * 0.28) * 0.12;
+            coreElements.orbitGroup.rotation.y = elapsed * 0.12;
+
+            // Slow counter-rotation of background architectural grid & cosmic dust
+            gridGroup.rotation.y = -elapsed * 0.04;
+            cosmicDust.rotation.y = elapsed * 0.025;
+
+            renderer.render(scene, camera);
+
+            // Render 2D Motion-Tracking Bounding Boxes & Vector Lines
+            renderMotionTrackingHUD(elapsed);
+            renderLightboxTrackingOverlay(elapsed);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Boot Application on Window Load
+        window.onload = function () {
+            state.memories = createPortfolioMemoryArtworks();
+            buildGlassVortex();
+            animate();
+        };
+    </script>
+</body>
+</html>
